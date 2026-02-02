@@ -1,0 +1,857 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Notey — Smart Study Notes</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap"
+            rel="stylesheet" />
+        <style>
+            /* CSS Variables */
+            :root {
+                --font-main: "DM Sans", system-ui, sans-serif;
+                --font-mono: "Space Mono", monospace;
+
+                --primary: #6366f1;
+                --primary-hover: #4f46e5;
+                --primary-light: #eef2ff;
+                --accent: #22d3ee;
+                --accent-dark: #0891b2;
+
+                --bg: #fafbfc;
+                --bg-dark: #0f172a;
+                --card-bg: #ffffff;
+                --text: #1e293b;
+                --text-muted: #64748b;
+                --border: #e2e8f0;
+                --border-hover: #cbd5e1;
+
+                --danger: #ef4444;
+                --danger-bg: #fee2e2;
+                --danger-hover: #dc2626;
+
+                --success: #10b981;
+                --success-bg: #d1fae5;
+
+                --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+                --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+                --shadow-lg: 0 10px 25px -3px rgba(0, 0, 0, 0.1);
+                --shadow-xl: 0 20px 40px -5px rgba(0, 0, 0, 0.15);
+
+                --radius: 12px;
+                --radius-lg: 16px;
+            }
+
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+
+            body {
+                font-family: var(--font-main);
+                background: var(--bg);
+                color: var(--text);
+                line-height: 1.6;
+                min-height: 100vh;
+            }
+
+            /* Header */
+            header {
+                background: linear-gradient(135deg, var(--primary) 0%, var(--accent-dark) 100%);
+                color: #fff;
+                padding: 1.25rem 2rem;
+                box-shadow: var(--shadow-lg);
+                position: sticky;
+                top: 0;
+                z-index: 100;
+                backdrop-filter: blur(10px);
+            }
+
+            .header-content {
+                max-width: 1200px;
+                margin: 0 auto;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 1rem;
+            }
+
+            .logo {
+                font-size: 1.5rem;
+                font-weight: 700;
+                font-family: var(--font-mono);
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+            }
+
+            .logo::before {
+                content: "📚";
+                font-size: 1.75rem;
+            }
+
+            .header-actions {
+                display: flex;
+                gap: 0.75rem;
+                align-items: center;
+            }
+
+            /* Container */
+            .container {
+                max-width: 1200px;
+                margin: 2rem auto;
+                padding: 0 1.5rem;
+            }
+
+            /* Cards */
+            .card {
+                background: var(--card-bg);
+                border-radius: var(--radius-lg);
+                padding: 2rem;
+                box-shadow: var(--shadow);
+                border: 1px solid var(--border);
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+
+            .card:hover {
+                box-shadow: var(--shadow-xl);
+                transform: translateY(-2px);
+            }
+
+            .card-compact {
+                padding: 1.5rem;
+            }
+
+            /* Typography */
+            h1 {
+                font-size: 2.5rem;
+                font-weight: 700;
+                margin-bottom: 0.5rem;
+                background: linear-gradient(135deg, var(--primary), var(--accent-dark));
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                background-clip: text;
+            }
+
+            h2 {
+                font-size: 2rem;
+                font-weight: 700;
+                margin-bottom: 1rem;
+                color: var(--text);
+            }
+
+            h3 {
+                font-size: 1.5rem;
+                font-weight: 600;
+                margin-bottom: 1rem;
+                color: var(--text);
+            }
+
+            .subtitle {
+                color: var(--text-muted);
+                font-size: 1.1rem;
+                margin-bottom: 2rem;
+            }
+
+            /* Buttons */
+            button,
+            .btn {
+                font-family: var(--font-main);
+                font-weight: 500;
+                padding: 0.75rem 1.5rem;
+                border: none;
+                border-radius: var(--radius);
+                cursor: pointer;
+                transition: all 0.2s ease;
+                font-size: 1rem;
+                display: inline-flex;
+                align-items: center;
+                gap: 0.5rem;
+                text-decoration: none;
+                box-shadow: var(--shadow-sm);
+            }
+
+            button:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+
+            .btn-primary {
+                background: linear-gradient(135deg, var(--primary), var(--accent-dark));
+                color: #fff;
+            }
+
+            .btn-primary:hover:not(:disabled) {
+                transform: translateY(-2px);
+                box-shadow: var(--shadow-lg);
+            }
+
+            .btn-secondary {
+                background: var(--card-bg);
+                color: var(--primary);
+                border: 2px solid var(--primary);
+            }
+
+            .btn-secondary:hover:not(:disabled) {
+                background: var(--primary-light);
+            }
+
+            .btn-danger {
+                background: var(--danger-bg);
+                color: var(--danger);
+                border: 1px solid var(--danger);
+            }
+
+            .btn-danger:hover:not(:disabled) {
+                background: var(--danger);
+                color: #fff;
+            }
+
+            .btn-sm {
+                padding: 0.5rem 1rem;
+                font-size: 0.9rem;
+            }
+
+            .btn-header {
+                padding: 0.5rem 1.25rem;
+                background: rgba(255, 255, 255, 0.2);
+                color: #fff;
+                border: 1px solid rgba(255, 255, 255, 0.3);
+                backdrop-filter: blur(10px);
+            }
+
+            .btn-header:hover {
+                background: rgba(255, 255, 255, 0.3);
+            }
+
+            /* Forms */
+            input,
+            select,
+            textarea {
+                font-family: var(--font-main);
+                padding: 0.875rem 1rem;
+                border: 2px solid var(--border);
+                border-radius: var(--radius);
+                font-size: 1rem;
+                width: 100%;
+                transition: all 0.2s ease;
+                background: var(--card-bg);
+            }
+
+            input:focus,
+            select:focus,
+            textarea:focus {
+                outline: none;
+                border-color: var(--primary);
+                box-shadow: 0 0 0 3px var(--primary-light);
+            }
+
+            .form-group {
+                margin-bottom: 1.5rem;
+            }
+
+            .form-group label {
+                display: block;
+                margin-bottom: 0.5rem;
+                font-weight: 500;
+                color: var(--text);
+            }
+
+            /* Layout */
+            .row {
+                display: flex;
+                gap: 1rem;
+                align-items: center;
+                flex-wrap: wrap;
+            }
+
+            .space-between {
+                justify-content: space-between;
+            }
+
+            .hidden {
+                display: none !important;
+            }
+
+            /* Grid layouts */
+            .grid-2 {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                gap: 1.5rem;
+            }
+
+            /* Class Cards */
+            .item-card {
+                background: var(--card-bg);
+                border: 2px solid var(--border);
+                border-radius: var(--radius);
+                padding: 1.5rem;
+                transition: all 0.2s ease;
+                cursor: pointer;
+            }
+
+            .item-card:hover {
+                border-color: var(--primary);
+                box-shadow: var(--shadow-lg);
+                transform: translateY(-2px);
+            }
+
+            .item-card-title {
+                font-size: 1.25rem;
+                font-weight: 600;
+                margin-bottom: 0.5rem;
+                color: var(--text);
+            }
+
+            .item-card-meta {
+                color: var(--text-muted);
+                font-size: 0.9rem;
+                margin-bottom: 1rem;
+            }
+
+            .item-card-actions {
+                display: flex;
+                gap: 0.75rem;
+                flex-wrap: wrap;
+            }
+
+            /* Utility */
+            .muted {
+                color: var(--text-muted);
+                font-size: 0.95rem;
+            }
+
+            .text-center {
+                text-align: center;
+            }
+
+            .mt-3 {
+                margin-top: 1.5rem;
+            }
+            .mb-2 {
+                margin-bottom: 1rem;
+            }
+            .mb-3 {
+                margin-bottom: 1.5rem;
+            }
+
+            /* Empty state */
+            .empty-state {
+                text-align: center;
+                padding: 3rem 1rem;
+                color: var(--text-muted);
+            }
+
+            .empty-state-icon {
+                font-size: 4rem;
+                margin-bottom: 1rem;
+                opacity: 0.5;
+            }
+
+            /* Animations */
+            @keyframes slideIn {
+                from {
+                    opacity: 0;
+                    transform: translateY(20px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+
+            .animate-in {
+                animation: slideIn 0.3s ease-out;
+            }
+
+            /* Responsive */
+            @media (max-width: 768px) {
+                .container {
+                    padding: 0 1rem;
+                }
+
+                .card {
+                    padding: 1.5rem;
+                }
+
+                h1 {
+                    font-size: 2rem;
+                }
+
+                h2 {
+                    font-size: 1.5rem;
+                }
+
+                .header-content {
+                    flex-direction: column;
+                    align-items: flex-start;
+                }
+
+                .header-actions {
+                    width: 100%;
+                    justify-content: flex-end;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <header>
+            <div class="header-content">
+                <div class="logo">Notey</div>
+                <div id="top-actions" class="header-actions"></div>
+            </div>
+        </header>
+
+        <main class="container">
+            <!-- Authentication View -->
+            <section id="view-auth" class="animate-in">
+                <div class="card" style="max-width: 600px; margin: 3rem auto">
+                    <h2 class="text-center">Welcome to Notey</h2>
+                    <p class="subtitle text-center">Your AI-powered study companion</p>
+
+                    <div class="grid-2">
+                        <!-- Sign In -->
+                        <div>
+                            <h3>Sign in</h3>
+                            <div class="form-group">
+                                <input id="signin-email" type="email" placeholder="Email" autocomplete="email" />
+                            </div>
+                            <div class="form-group">
+                                <input
+                                    id="signin-password"
+                                    type="password"
+                                    placeholder="Password"
+                                    autocomplete="current-password" />
+                            </div>
+                            <button id="btn-signin" class="btn-primary" style="width: 100%">Sign in</button>
+                        </div>
+
+                        <!-- Create Account -->
+                        <div>
+                            <h3>Create account</h3>
+                            <div id="create-form">
+                                <div class="form-group">
+                                    <input id="reg-name" type="text" placeholder="Full name" autocomplete="name" />
+                                </div>
+                                <div class="form-group">
+                                    <input id="reg-email" type="email" placeholder="Email" autocomplete="email" />
+                                </div>
+                                <div class="form-group">
+                                    <input
+                                        id="reg-password"
+                                        type="password"
+                                        placeholder="Password"
+                                        autocomplete="new-password" />
+                                </div>
+                                <button id="btn-register" class="btn-primary" style="width: 100%">
+                                    Create account
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <p class="muted mt-3 text-center">New accounts require admin approval before you can sign in.</p>
+                </div>
+            </section>
+
+            <!-- Classes View -->
+            <section id="view-classes" class="hidden animate-in">
+                <div class="card">
+                    <div class="row space-between mb-3">
+                        <div>
+                            <h2 id="welcome-name">Welcome</h2>
+                            <p class="muted" id="welcome-email">user@example.com</p>
+                        </div>
+                        <button id="btn-logout" class="btn-secondary btn-sm">Sign out</button>
+                    </div>
+
+                    <hr style="border: none; border-top: 1px solid var(--border); margin: 1.5rem 0" />
+
+                    <h3>Your Classes</h3>
+                    <div class="row mb-3">
+                        <input
+                            id="new-class-name"
+                            placeholder="Class name (e.g., Mathematics, History)"
+                            style="flex: 1" />
+                        <button id="btn-add-class" class="btn-primary">Add Class</button>
+                    </div>
+
+                    <div id="classes-container" class="grid-2">
+                        <!-- Classes will be loaded here -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Admin View -->
+            <section id="view-admin" class="card hidden">
+                <h2>Admin Panel</h2>
+                <p class="muted mb-3">Approve or reject new user accounts</p>
+                <h3>Pending Users</h3>
+                <div id="pending-users">
+                    <!-- Pending users will be loaded here -->
+                </div>
+            </section>
+        </main>
+
+        <script type="module">
+            // ============================================================================
+            // FIREBASE CONFIGURATION
+            // ============================================================================
+            const firebaseConfig = {
+                apiKey: "AIzaSyCPU33ZcxWoS9NUaDEYJvNcB8FvVtdBTrg",
+                authDomain: "notey-4455f.firebaseapp.com",
+                projectId: "notey-4455f",
+                storageBucket: "notey-4455f.firebasestorage.app",
+                messagingSenderId: "554664934050",
+                appId: "1:554664934050:web:2e0a56b2dd0823cafa35fb",
+                measurementId: "G-L0RJKWNMN7"
+            };
+
+            const adminEmails = ["kaioliver111@gmail.com"];
+
+            // ============================================================================
+            // FIREBASE IMPORTS
+            // ============================================================================
+            import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+            import {
+                getAuth,
+                onAuthStateChanged,
+                createUserWithEmailAndPassword,
+                signInWithEmailAndPassword,
+                signOut
+            } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+            import {
+                getFirestore,
+                doc,
+                setDoc,
+                getDoc,
+                collection,
+                addDoc,
+                getDocs,
+                updateDoc,
+                deleteDoc
+            } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+
+            const app = initializeApp(firebaseConfig);
+            const auth = getAuth(app);
+            const db = getFirestore(app);
+
+            // ============================================================================
+            // APPLICATION STATE
+            // ============================================================================
+            const state = {
+                currentUser: null,
+                currentView: "auth"
+            };
+
+            // ============================================================================
+            // VIEW MANAGEMENT
+            // ============================================================================
+            const views = {
+                auth: document.getElementById("view-auth"),
+                classes: document.getElementById("view-classes"),
+                admin: document.getElementById("view-admin")
+            };
+
+            function showView(viewName) {
+                Object.values(views).forEach((view) => view.classList.add("hidden"));
+                if (views[viewName]) {
+                    views[viewName].classList.remove("hidden");
+                    state.currentView = viewName;
+                }
+            }
+
+            // ============================================================================
+            // UTILITY FUNCTIONS
+            // ============================================================================
+            function formatDateTime(timestamp) {
+                if (!timestamp) return "—";
+                const date = timestamp.toDate?.() || new Date(timestamp);
+                return date.toLocaleString();
+            }
+
+            // ============================================================================
+            // AUTHENTICATION
+            // ============================================================================
+            document.getElementById("btn-register").addEventListener("click", async () => {
+                try {
+                    const email = document.getElementById("reg-email").value.trim();
+                    const password = document.getElementById("reg-password").value;
+                    const name = document.getElementById("reg-name").value.trim() || "Unknown";
+
+                    if (!email || !password) {
+                        alert("Please provide email and password");
+                        return;
+                    }
+
+                    if (password.length < 6) {
+                        alert("Password must be at least 6 characters");
+                        return;
+                    }
+
+                    const cred = await createUserWithEmailAndPassword(auth, email, password);
+
+                    const userDocRef = doc(db, "users", cred.user.uid);
+                    const userDocSnap = await getDoc(userDocRef);
+
+                    if (!userDocSnap.exists()) {
+                        await setDoc(userDocRef, {
+                            email,
+                            name,
+                            approved: false,
+                            createdAt: new Date()
+                        });
+                    }
+
+                    alert("Account created! Please wait for admin approval before signing in.");
+                    document.getElementById("reg-name").value = "";
+                    document.getElementById("reg-email").value = "";
+                    document.getElementById("reg-password").value = "";
+
+                    await signOut(auth);
+                } catch (error) {
+                    console.error("Registration error:", error);
+                    alert(error.message);
+                }
+            });
+
+            document.getElementById("btn-signin").addEventListener("click", async () => {
+                try {
+                    const email = document.getElementById("signin-email").value.trim();
+                    const password = document.getElementById("signin-password").value;
+
+                    if (!email || !password) {
+                        alert("Please provide email and password");
+                        return;
+                    }
+
+                    await signInWithEmailAndPassword(auth, email, password);
+                } catch (error) {
+                    console.error("Sign in error:", error);
+                    alert(error.message);
+                }
+            });
+
+            document.getElementById("btn-logout").addEventListener("click", async () => {
+                try {
+                    await signOut(auth);
+                } catch (error) {
+                    console.error("Sign out error:", error);
+                    alert(error.message);
+                }
+            });
+
+            // ============================================================================
+            // AUTH STATE LISTENER
+            // ============================================================================
+            onAuthStateChanged(auth, async (user) => {
+                state.currentUser = user;
+                const topActions = document.getElementById("top-actions");
+                topActions.innerHTML = "";
+
+                if (!user) {
+                    showView("auth");
+                    return;
+                }
+
+                try {
+                    const userDoc = await getDoc(doc(db, "users", user.uid));
+
+                    if (!userDoc.exists()) {
+                        await signOut(auth);
+                        alert("User profile not found. Please contact admin.");
+                        return;
+                    }
+
+                    const userData = userDoc.data();
+
+                    if (!userData.approved) {
+                        await signOut(auth);
+                        alert("Your account is pending approval. Please wait for admin approval.");
+                        return;
+                    }
+
+                    document.getElementById("welcome-name").textContent = `Welcome, ${userData.name || "Student"}`;
+                    document.getElementById("welcome-email").textContent = user.email;
+
+                    if (adminEmails.includes(user.email)) {
+                        const adminBtn = document.createElement("button");
+                        adminBtn.textContent = "Admin";
+                        adminBtn.className = "btn-header";
+                        adminBtn.addEventListener("click", () => {
+                            renderPendingUsers();
+                            showView("admin");
+                        });
+                        topActions.appendChild(adminBtn);
+                    }
+
+                    showView("classes");
+                    loadClasses();
+                } catch (error) {
+                    console.error("Auth state error:", error);
+                    alert("An error occurred. Please try signing in again.");
+                    await signOut(auth);
+                }
+            });
+
+            // ============================================================================
+            // ADMIN FUNCTIONS
+            // ============================================================================
+            async function renderPendingUsers() {
+                const container = document.getElementById("pending-users");
+                container.innerHTML = '<div class="muted">Loading...</div>';
+
+                try {
+                    const usersSnapshot = await getDocs(collection(db, "users"));
+                    container.innerHTML = "";
+
+                    let hasPending = false;
+                    usersSnapshot.forEach((docSnap) => {
+                        const userData = docSnap.data();
+
+                        if (!userData.approved) {
+                            hasPending = true;
+                            const card = document.createElement("div");
+                            card.className = "item-card";
+                            card.innerHTML = `
+              <div class="item-card-title">${userData.name || "Unknown"}</div>
+              <div class="item-card-meta">${userData.email}</div>
+              <div class="muted mb-2">Registered: ${formatDateTime(userData.createdAt)}</div>
+              <div class="item-card-actions">
+                <button class="btn-primary btn-sm approve-btn" data-id="${docSnap.id}" data-name="${userData.name || userData.email}">
+                  Approve
+                </button>
+              </div>
+            `;
+                            container.appendChild(card);
+                        }
+                    });
+
+                    if (!hasPending) {
+                        container.innerHTML =
+                            '<div class="empty-state"><div class="empty-state-icon">✓</div><p>No pending users</p></div>';
+                    } else {
+                        document.querySelectorAll(".approve-btn").forEach((btn) => {
+                            btn.addEventListener("click", async (e) => {
+                                const userId = e.target.dataset.id;
+                                const userName = e.target.dataset.name;
+                                try {
+                                    await updateDoc(doc(db, "users", userId), { approved: true });
+                                    alert(`Approved ${userName}`);
+                                    renderPendingUsers();
+                                } catch (error) {
+                                    console.error("Approve error:", error);
+                                    alert("Error approving user");
+                                }
+                            });
+                        });
+                    }
+                } catch (error) {
+                    console.error("Error loading pending users:", error);
+                    container.innerHTML = '<div class="muted">Error loading users</div>';
+                }
+            }
+
+            // ============================================================================
+            // CLASS MANAGEMENT
+            // ============================================================================
+            async function loadClasses() {
+                const container = document.getElementById("classes-container");
+                container.innerHTML = '<div class="muted">Loading classes...</div>';
+
+                try {
+                    const classesRef = collection(db, "users", state.currentUser.uid, "classes");
+                    const snapshot = await getDocs(classesRef);
+
+                    container.innerHTML = "";
+
+                    if (snapshot.empty) {
+                        container.innerHTML = `
+            <div class="empty-state" style="grid-column: 1 / -1;">
+              <div class="empty-state-icon">📚</div>
+              <p>No classes yet. Create your first class above!</p>
+            </div>
+          `;
+                        return;
+                    }
+
+                    snapshot.forEach((docSnap) => {
+                        const classData = docSnap.data();
+                        const card = document.createElement("div");
+                        card.className = "item-card";
+                        card.innerHTML = `
+            <div class="item-card-title">${classData.name}</div>
+            <div class="item-card-meta">Created: ${formatDateTime(classData.createdAt)}</div>
+            <div class="item-card-actions">
+              <button class="btn-primary btn-sm open-class" data-id="${docSnap.id}" data-name="${classData.name}">
+                Open →
+              </button>
+              <button class="btn-danger btn-sm delete-class" data-id="${docSnap.id}" data-name="${classData.name}">
+                Delete
+              </button>
+            </div>
+          `;
+                        container.appendChild(card);
+                    });
+
+                    document.querySelectorAll(".open-class").forEach((btn) => {
+                        btn.addEventListener("click", (e) => {
+                            const classId = e.target.dataset.id;
+                            const className = e.target.dataset.name;
+                            // Store class info in sessionStorage and navigate to lessons page
+                            sessionStorage.setItem("currentClass", JSON.stringify({ id: classId, name: className }));
+                            window.location.href = "lessons/index.html";
+                        });
+                    });
+
+                    document.querySelectorAll(".delete-class").forEach((btn) => {
+                        btn.addEventListener("click", async (e) => {
+                            if (confirm(`Delete "${e.target.dataset.name}" and all its lessons?`)) {
+                                try {
+                                    await deleteDoc(
+                                        doc(db, "users", state.currentUser.uid, "classes", e.target.dataset.id)
+                                    );
+                                    loadClasses();
+                                } catch (error) {
+                                    console.error("Delete class error:", error);
+                                    alert("Error deleting class");
+                                }
+                            }
+                        });
+                    });
+                } catch (error) {
+                    console.error("Error loading classes:", error);
+                    container.innerHTML = '<div class="muted">Error loading classes</div>';
+                }
+            }
+
+            document.getElementById("btn-add-class").addEventListener("click", async () => {
+                const name = document.getElementById("new-class-name").value.trim();
+
+                if (!name) {
+                    alert("Please enter a class name");
+                    return;
+                }
+
+                try {
+                    await addDoc(collection(db, "users", state.currentUser.uid, "classes"), {
+                        name,
+                        createdAt: new Date()
+                    });
+
+                    document.getElementById("new-class-name").value = "";
+                    loadClasses();
+                } catch (error) {
+                    console.error("Add class error:", error);
+                    alert("Error adding class");
+                }
+            });
+
+            console.log("Notey app loaded successfully!");
+        </script>
+    </body>
+</html>
