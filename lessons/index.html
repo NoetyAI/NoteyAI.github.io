@@ -9,6 +9,8 @@
         <link
             href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap"
             rel="stylesheet" />
+        <!-- PDF.js for PDF text extraction -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
         <style>
             /* CSS Variables */
             :root {
@@ -186,6 +188,16 @@
             .btn-ai:hover:not(:disabled) {
                 transform: translateY(-2px);
                 box-shadow: 0 10px 25px -3px rgba(139, 92, 246, 0.4);
+            }
+
+            .btn-transcribe {
+                background: linear-gradient(135deg, #0891b2, #06b6d4);
+                color: #fff;
+            }
+
+            .btn-transcribe:hover:not(:disabled) {
+                transform: translateY(-2px);
+                box-shadow: 0 10px 25px -3px rgba(8, 145, 178, 0.4);
             }
 
             .btn-sm {
@@ -500,11 +512,129 @@
                 margin-bottom: 0.5rem;
             }
 
-            /* Enhanced note content area */
+            /* Enhanced note content area with live preview */
+            .note-editor-container {
+                position: relative;
+                border: 2px solid var(--border);
+                border-radius: var(--radius);
+                overflow: hidden;
+                background: white;
+            }
+
+            .note-editor-container:focus-within {
+                border-color: var(--primary);
+                box-shadow: 0 0 0 3px var(--primary-light);
+            }
+
             #note-content {
-                font-family: var(--font-main);
+                font-family: var(--font-mono);
                 line-height: 1.8;
                 min-height: 400px;
+                border: none;
+                background: transparent;
+                position: relative;
+                z-index: 2;
+                color: transparent;
+                caret-color: var(--text);
+                padding: 1rem;
+            }
+
+            #note-content:focus {
+                outline: none;
+                border: none;
+                box-shadow: none;
+            }
+
+            #note-preview {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                padding: 1rem;
+                font-family: var(--font-mono);
+                line-height: 1.8;
+                pointer-events: none;
+                z-index: 1;
+                white-space: pre-wrap;
+                word-wrap: break-word;
+                overflow-y: auto;
+            }
+
+            /* Live preview formatting styles */
+            .preview-h1 {
+                font-size: 2em;
+                font-weight: 700;
+                color: var(--text);
+                display: block;
+                margin: 0.67em 0;
+            }
+
+            .preview-h2 {
+                font-size: 1.5em;
+                font-weight: 700;
+                color: var(--text);
+                display: block;
+                margin: 0.75em 0;
+            }
+
+            .preview-h3 {
+                font-size: 1.17em;
+                font-weight: 700;
+                color: var(--text);
+                display: block;
+                margin: 0.83em 0;
+            }
+
+            .preview-bold {
+                font-weight: 700;
+                color: var(--text);
+            }
+
+            .preview-italic {
+                font-style: italic;
+                color: var(--text);
+            }
+
+            .preview-underline {
+                text-decoration: underline;
+                color: var(--text);
+            }
+
+            .preview-code {
+                background: #f1f5f9;
+                padding: 0.2em 0.4em;
+                border-radius: 3px;
+                font-family: var(--font-mono);
+                color: #e11d48;
+            }
+
+            .preview-code-block {
+                background: #f1f5f9;
+                padding: 1em;
+                border-radius: 6px;
+                font-family: var(--font-mono);
+                color: var(--text);
+                display: block;
+                margin: 1em 0;
+                border-left: 4px solid var(--primary);
+            }
+
+            .preview-quote {
+                color: var(--text-muted);
+                border-left: 4px solid var(--border);
+                padding-left: 1em;
+                font-style: italic;
+            }
+
+            .preview-list-item {
+                color: var(--text);
+                display: list-item;
+                margin-left: 2em;
+            }
+
+            .preview-text {
+                color: var(--text);
             }
 
             /* Upload progress indicator */
@@ -617,7 +747,7 @@
                         <span id="breadcrumb-class" class="breadcrumb-current">—</span>
                     </div>
 
-                    <!-- Search bar for lesson titles -->
+                    <!-- Search bar for lessons -->
                     <div class="search-container">
                         <span class="search-icon">🔍</span>
                         <input
@@ -718,14 +848,17 @@
                     </div>
 
                     <div class="form-group">
-                        <textarea id="note-content" rows="12" placeholder="Write your notes here..."></textarea>
+                        <div class="note-editor-container">
+                            <div id="note-preview"></div>
+                            <textarea id="note-content" rows="12" placeholder="Write your notes here..."></textarea>
+                        </div>
                     </div>
                     <button id="btn-save-note" class="btn-primary">Save Notes</button>
 
                     <!-- AI Section -->
                     <div class="ai-section">
                         <h4>AI Study Assistant</h4>
-                        <p class="muted mb-2">Get AI-powered help with your notes</p>
+                        <p class="muted mb-2">Get AI-powered help with your notes. (May not work at school)</p>
 
                         <div class="row mb-2">
                             <button id="btn-ai-summarize" class="btn-ai btn-sm">Summarize Notes</button>
@@ -743,9 +876,14 @@
 
                     <h3>Attachments</h3>
                     <div class="form-group">
-                        <input type="file" id="file-upload" multiple />
+                        <input type="file" id="file-upload" multiple accept=".pdf,.ppt,.pptx,image/*,*" />
+                        <p class="muted" style="margin-top: 0.5rem;">💡 Upload PDFs or PowerPoint files to transcribe them into your notes!</p>
                     </div>
                     <button id="btn-upload" class="btn-secondary mb-2">Upload File(s)</button>
+                    
+                    <div id="transcribe-status" class="hidden" style="margin-top: 1rem; padding: 1rem; background: var(--primary-light); border-radius: var(--radius); border: 2px solid var(--primary);">
+                        <div id="transcribe-message" class="muted">Processing file...</div>
+                    </div>
                     
                     <div id="upload-progress" class="upload-progress">
                         <div class="muted">Uploading files...</div>
@@ -783,7 +921,7 @@
             const CLOUDINARY_API_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/upload`;
 
             // ============================================================================
-            // FIREBASE IMPORTS (No Storage imports needed)
+            // FIREBASE IMPORTS
             // ============================================================================
             import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
             import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
@@ -804,6 +942,11 @@
             const app = initializeApp(firebaseConfig);
             const auth = getAuth(app);
             const db = getFirestore(app);
+
+            // Configure PDF.js
+            if (typeof pdfjsLib !== 'undefined') {
+                pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+            }
 
             // ============================================================================
             // APPLICATION STATE
@@ -839,6 +982,120 @@
             };
 
             // ============================================================================
+            // LIVE PREVIEW FORMATTING
+            // ============================================================================
+            function parseAndFormatText(text) {
+                if (!text) return '';
+                
+                let html = '';
+                const lines = text.split('\n');
+                let inCodeBlock = false;
+                let codeBlockContent = '';
+                
+                for (let line of lines) {
+                    // Handle code blocks
+                    if (line.trim().startsWith('```')) {
+                        if (inCodeBlock) {
+                            html += `<span class="preview-code-block">${escapeHtml(codeBlockContent)}</span>\n`;
+                            codeBlockContent = '';
+                            inCodeBlock = false;
+                        } else {
+                            inCodeBlock = true;
+                        }
+                        continue;
+                    }
+                    
+                    if (inCodeBlock) {
+                        codeBlockContent += line + '\n';
+                        continue;
+                    }
+                    
+                    // Handle headings
+                    if (line.startsWith('### ')) {
+                        html += `<span class="preview-h3">${escapeHtml(line.substring(4))}</span>\n`;
+                        continue;
+                    }
+                    if (line.startsWith('## ')) {
+                        html += `<span class="preview-h2">${escapeHtml(line.substring(3))}</span>\n`;
+                        continue;
+                    }
+                    if (line.startsWith('# ')) {
+                        html += `<span class="preview-h1">${escapeHtml(line.substring(2))}</span>\n`;
+                        continue;
+                    }
+                    
+                    // Handle quotes
+                    if (line.startsWith('> ')) {
+                        html += `<span class="preview-quote">${formatInlineMarkdown(line.substring(2))}</span>\n`;
+                        continue;
+                    }
+                    
+                    // Handle lists
+                    if (line.match(/^[•\-]\s/)) {
+                        html += `<span class="preview-list-item">${formatInlineMarkdown(line.substring(2))}</span>\n`;
+                        continue;
+                    }
+                    if (line.match(/^\d+\.\s/)) {
+                        const match = line.match(/^(\d+)\.\s(.*)$/);
+                        if (match) {
+                            html += `<span class="preview-list-item">${match[1]}. ${formatInlineMarkdown(match[2])}</span>\n`;
+                            continue;
+                        }
+                    }
+                    
+                    // Regular text with inline formatting
+                    html += `<span class="preview-text">${formatInlineMarkdown(line)}</span>\n`;
+                }
+                
+                // Close any open code block
+                if (inCodeBlock) {
+                    html += `<span class="preview-code-block">${escapeHtml(codeBlockContent)}</span>\n`;
+                }
+                
+                return html;
+            }
+            
+            function formatInlineMarkdown(text) {
+                if (!text) return '';
+                
+                // Bold (**text** or __text__)
+                text = text.replace(/\*\*([^*]+)\*\*/g, '<span class="preview-bold">$1</span>');
+                text = text.replace(/__([^_]+)__/g, '<span class="preview-underline">$1</span>');
+                
+                // Italic (*text*)
+                text = text.replace(/\*([^*]+)\*/g, '<span class="preview-italic">$1</span>');
+                
+                // Inline code (`code`)
+                text = text.replace(/`([^`]+)`/g, '<span class="preview-code">$1</span>');
+                
+                return escapeHtml(text).replace(/&lt;span class="preview-/g, '<span class="preview-').replace(/&lt;\/span&gt;/g, '</span>');
+            }
+            
+            function escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+            
+            function updatePreview() {
+                const textarea = document.getElementById('note-content');
+                const preview = document.getElementById('note-preview');
+                const formattedText = parseAndFormatText(textarea.value);
+                preview.innerHTML = formattedText;
+                
+                // Sync scroll
+                preview.scrollTop = textarea.scrollTop;
+            }
+            
+            // Set up live preview
+            const noteContent = document.getElementById('note-content');
+            noteContent.addEventListener('input', updatePreview);
+            noteContent.addEventListener('scroll', () => {
+                const preview = document.getElementById('note-preview');
+                preview.scrollTop = noteContent.scrollTop;
+            });
+
+            // ============================================================================
             // UTILITY FUNCTIONS
             // ============================================================================
             function formatDate(timestamp) {
@@ -850,6 +1107,109 @@
             function isImageFile(fileName) {
                 const ext = fileName.split('.').pop().toLowerCase();
                 return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'].includes(ext);
+            }
+
+            function isTranscribableFile(fileName) {
+                const ext = fileName.split('.').pop().toLowerCase();
+                return ['pdf', 'ppt', 'pptx'].includes(ext);
+            }
+
+            // ============================================================================
+            // FILE TRANSCRIPTION FUNCTIONS
+            // ============================================================================
+            function showTranscribeStatus(message, isError = false) {
+                const statusDiv = document.getElementById("transcribe-status");
+                const messageDiv = document.getElementById("transcribe-message");
+                statusDiv.classList.remove("hidden");
+                messageDiv.textContent = message;
+                
+                if (isError) {
+                    statusDiv.style.background = "var(--danger-bg)";
+                    statusDiv.style.borderColor = "var(--danger)";
+                } else {
+                    statusDiv.style.background = "var(--primary-light)";
+                    statusDiv.style.borderColor = "var(--primary)";
+                }
+            }
+
+            function hideTranscribeStatus() {
+                document.getElementById("transcribe-status").classList.add("hidden");
+            }
+
+            async function extractTextFromPDF(file) {
+                try {
+                    const arrayBuffer = await file.arrayBuffer();
+                    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                    let fullText = "";
+
+                    for (let i = 1; i <= pdf.numPages; i++) {
+                        const page = await pdf.getPage(i);
+                        const textContent = await page.getTextContent();
+                        const pageText = textContent.items.map(item => item.str).join(" ");
+                        fullText += `\n\n--- Page ${i} ---\n${pageText}`;
+                    }
+
+                    return fullText;
+                } catch (error) {
+                    console.error("PDF extraction error:", error);
+                    throw new Error("Failed to extract text from PDF");
+                }
+            }
+
+            async function extractTextFromPPTX(file) {
+                // For PowerPoint files, we upload and use Claude API
+                try {
+                    showTranscribeStatus("Uploading PowerPoint to analyze...");
+                    const uploadResult = await uploadToCloudinary(file);
+                    
+                    showTranscribeStatus("Analyzing PowerPoint content with AI...");
+                    const prompt = `I have a PowerPoint presentation. Please extract and transcribe all the text content from it, organizing it by slides. Format it in a clear, readable way that would be useful for study notes. The presentation is at: ${uploadResult.secure_url}`;
+                    
+                    const transcription = await callClaudeAPI(prompt);
+                    return transcription;
+                } catch (error) {
+                    console.error("PPTX extraction error:", error);
+                    throw new Error("Failed to extract text from PowerPoint");
+                }
+            }
+
+            async function transcribeAndAddToNotes(file) {
+                const ext = file.name.split('.').pop().toLowerCase();
+                let extractedText = "";
+
+                try {
+                    if (ext === 'pdf') {
+                        showTranscribeStatus("Extracting text from PDF...");
+                        extractedText = await extractTextFromPDF(file);
+                        
+                        showTranscribeStatus("Summarizing PDF content with AI...");
+                        const prompt = `Please create clean, organized study notes from this PDF content. Remove any redundant text, organize by topics/sections, and make it suitable for studying:\n\n${extractedText}`;
+                        extractedText = await callClaudeAPI(prompt);
+                        
+                    } else if (['ppt', 'pptx'].includes(ext)) {
+                        extractedText = await extractTextFromPPTX(file);
+                    } else {
+                        throw new Error("Unsupported file type for transcription");
+                    }
+
+                    // Add to notes
+                    const currentNotes = document.getElementById("note-content").value;
+                    const separator = currentNotes.trim() ? "\n\n---\n\n" : "";
+                    const newNotes = currentNotes + separator + `# Transcribed from ${file.name}\n\n${extractedText}`;
+                    
+                    document.getElementById("note-content").value = newNotes;
+                    updatePreview(); // Update the live preview
+                    
+                    showTranscribeStatus(`✓ Successfully transcribed ${file.name}! Content added to notes.`);
+                    setTimeout(hideTranscribeStatus, 5000);
+                    
+                    return true;
+                } catch (error) {
+                    console.error("Transcription error:", error);
+                    showTranscribeStatus(`✗ Error transcribing ${file.name}: ${error.message}`, true);
+                    setTimeout(hideTranscribeStatus, 5000);
+                    return false;
+                }
             }
 
             // ============================================================================
@@ -941,6 +1301,8 @@
                 textarea.focus();
                 textarea.selectionStart = start + cursorOffset;
                 textarea.selectionEnd = start + cursorOffset;
+                
+                updatePreview(); // Update preview after formatting
             }
 
             // Setup formatting toolbar
@@ -985,13 +1347,12 @@
                 const searchTerm = query.toLowerCase();
                 const results = [];
 
-                // Search through all lessons by lesson number and date
+                // Search through lessons by lesson number, week, and date
                 for (const lesson of state.allLessons) {
                     const lessonNumber = lesson.data.lessonNumber?.toString() || "";
                     const week = lesson.data.week?.toString() || "";
                     const date = formatDate(lesson.data.date);
                     
-                    // Check if search term matches lesson number, week, or date
                     if (lessonNumber.includes(searchTerm) || 
                         week.includes(searchTerm) || 
                         date.toLowerCase().includes(searchTerm)) {
@@ -1017,7 +1378,7 @@
                         </div>
                     `;
 
-                    // Add click handlers to results
+                    // Add click handlers
                     resultsContainer.querySelectorAll(".search-result-item").forEach((item) => {
                         item.addEventListener("click", async () => {
                             const lessonId = item.dataset.lessonId;
@@ -1061,7 +1422,6 @@
 
                 state.currentUser = user;
 
-                // Get class info from sessionStorage
                 const classData = sessionStorage.getItem("currentClass");
                 if (!classData) {
                     window.location.href = "../index.html";
@@ -1098,38 +1458,38 @@
                     const snapshot = await getDocs(lessonsRef);
 
                     container.innerHTML = "";
-                    state.allLessons = []; // Clear and rebuild
+                    state.allLessons = [];
 
                     if (snapshot.empty) {
                         container.innerHTML = `
-            <div class="empty-state" style="grid-column: 1 / -1;">
-              <div class="empty-state-icon">📝</div>
-              <p>No lessons yet. Add your first lesson above!</p>
-            </div>
-          `;
+                            <div class="empty-state" style="grid-column: 1 / -1;">
+                                <div class="empty-state-icon">📝</div>
+                                <p>No lessons yet. Add your first lesson above!</p>
+                            </div>
+                        `;
                         return;
                     }
 
                     snapshot.forEach((docSnap) => {
                         const lessonData = docSnap.data();
-                        state.allLessons.push({ id: docSnap.id, data: lessonData }); // Store for search
+                        state.allLessons.push({ id: docSnap.id, data: lessonData });
 
                         const card = document.createElement("div");
                         card.className = "item-card";
                         card.innerHTML = `
-            <div class="item-card-title">Lesson ${lessonData.lessonNumber || "—"}</div>
-            <div class="item-card-meta">
-              ${formatDate(lessonData.date)} · Week ${lessonData.week || "—"}
-            </div>
-            <div class="item-card-actions">
-              <button class="btn-primary btn-sm open-lesson" data-id="${docSnap.id}">
-                Open →
-              </button>
-              <button class="btn-danger btn-sm delete-lesson" data-id="${docSnap.id}">
-                Delete
-              </button>
-            </div>
-          `;
+                            <div class="item-card-title">Lesson ${lessonData.lessonNumber || "—"}</div>
+                            <div class="item-card-meta">
+                                ${formatDate(lessonData.date)} · Week ${lessonData.week || "—"}
+                            </div>
+                            <div class="item-card-actions">
+                                <button class="btn-primary btn-sm open-lesson" data-id="${docSnap.id}">
+                                    Open →
+                                </button>
+                                <button class="btn-danger btn-sm delete-lesson" data-id="${docSnap.id}">
+                                    Delete
+                                </button>
+                            </div>
+                        `;
                         container.appendChild(card);
                     });
 
@@ -1137,15 +1497,7 @@
                         btn.addEventListener("click", async (e) => {
                             const lessonId = e.target.dataset.id;
                             const lessonDoc = await getDoc(
-                                doc(
-                                    db,
-                                    "users",
-                                    state.currentUser.uid,
-                                    "classes",
-                                    state.currentClass.id,
-                                    "lessons",
-                                    lessonId
-                                )
+                                doc(db, "users", state.currentUser.uid, "classes", state.currentClass.id, "lessons", lessonId)
                             );
                             openLesson(lessonId, lessonDoc.data());
                         });
@@ -1156,15 +1508,7 @@
                             if (confirm("Delete this lesson?")) {
                                 try {
                                     await deleteDoc(
-                                        doc(
-                                            db,
-                                            "users",
-                                            state.currentUser.uid,
-                                            "classes",
-                                            state.currentClass.id,
-                                            "lessons",
-                                            e.target.dataset.id
-                                        )
+                                        doc(db, "users", state.currentUser.uid, "classes", state.currentClass.id, "lessons", e.target.dataset.id)
                                     );
                                     loadLessons();
                                 } catch (error) {
@@ -1193,7 +1537,7 @@
                     lessonNumber: document.getElementById("lesson-number").value || null,
                     week: document.getElementById("lesson-week").value || null,
                     createdAt: new Date(),
-                    attachments: [] // Initialize empty attachments array
+                    attachments: []
                 };
 
                 try {
@@ -1242,26 +1586,18 @@
                 document.getElementById("lesson-detail-meta").textContent =
                     `${formatDate(lessonData.date)} · Week ${lessonData.week || "—"}`;
 
-                // Load note content
                 try {
                     const noteDoc = await getDoc(
-                        doc(
-                            db,
-                            "users",
-                            state.currentUser.uid,
-                            "classes",
-                            state.currentClass.id,
-                            "lessons",
-                            lessonId,
-                            "content",
-                            "note"
-                        )
+                        doc(db, "users", state.currentUser.uid, "classes", state.currentClass.id, "lessons", lessonId, "content", "note")
                     );
 
-                    document.getElementById("note-content").value = noteDoc.exists() ? noteDoc.data().text || "" : "";
+                    const noteText = noteDoc.exists() ? noteDoc.data().text || "" : "";
+                    document.getElementById("note-content").value = noteText;
+                    updatePreview(); // Initialize preview with loaded content
                 } catch (error) {
                     console.error("Error loading note:", error);
                     document.getElementById("note-content").value = "";
+                    updatePreview();
                 }
 
                 showView("lessonDetail");
@@ -1276,17 +1612,7 @@
 
                 try {
                     await setDoc(
-                        doc(
-                            db,
-                            "users",
-                            state.currentUser.uid,
-                            "classes",
-                            state.currentClass.id,
-                            "lessons",
-                            state.currentLesson.id,
-                            "content",
-                            "note"
-                        ),
+                        doc(db, "users", state.currentUser.uid, "classes", state.currentClass.id, "lessons", state.currentLesson.id, "content", "note"),
                         {
                             text: document.getElementById("note-content").value,
                             updatedAt: new Date()
@@ -1312,15 +1638,7 @@
                 if (confirm("Delete this lesson?")) {
                     try {
                         await deleteDoc(
-                            doc(
-                                db,
-                                "users",
-                                state.currentUser.uid,
-                                "classes",
-                                state.currentClass.id,
-                                "lessons",
-                                state.currentLesson.id
-                            )
+                            doc(db, "users", state.currentUser.uid, "classes", state.currentClass.id, "lessons", state.currentLesson.id)
                         );
 
                         state.currentLesson = null;
@@ -1341,7 +1659,6 @@
                 formData.append("file", file);
                 formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
                 
-                // Add folder structure for organization
                 const folder = `notey/${state.currentUser.uid}/${state.currentClass.id}/${state.currentLesson.id}`;
                 formData.append("folder", folder);
 
@@ -1358,8 +1675,6 @@
             }
 
             async function deleteFromCloudinary(publicId) {
-                // Note: Deletion from Cloudinary typically requires backend implementation
-                // with signed requests for security. For now, we'll just remove from Firestore.
                 console.warn("Cloudinary deletion requires backend implementation for security");
             }
 
@@ -1370,17 +1685,8 @@
                 container.innerHTML = '<div class="muted">Loading files...</div>';
 
                 try {
-                    // Refresh lesson data to get latest attachments
                     const lessonDoc = await getDoc(
-                        doc(
-                            db,
-                            "users",
-                            state.currentUser.uid,
-                            "classes",
-                            state.currentClass.id,
-                            "lessons",
-                            state.currentLesson.id
-                        )
+                        doc(db, "users", state.currentUser.uid, "classes", state.currentClass.id, "lessons", state.currentLesson.id)
                     );
 
                     const attachments = lessonDoc.data()?.attachments || [];
@@ -1395,18 +1701,18 @@
                         const fileCard = document.createElement("div");
                         fileCard.className = "item-card";
                         
-                        // Determine file type icon
                         let icon = "📎";
                         const ext = attachment.fileName.split('.').pop().toLowerCase();
                         const isImage = isImageFile(attachment.fileName);
+                        const canTranscribe = isTranscribableFile(attachment.fileName);
                         
                         if (isImage) icon = "🖼️";
                         else if (['pdf'].includes(ext)) icon = "📄";
                         else if (['doc', 'docx'].includes(ext)) icon = "📝";
-                        else if (['xls', 'xlsx'].includes(ext)) icon = "📊";
+                        else if (['ppt', 'pptx'].includes(ext)) icon = "📊";
+                        else if (['xls', 'xlsx'].includes(ext)) icon = "📈";
                         else if (['zip', 'rar'].includes(ext)) icon = "📦";
 
-                        // Create preview content
                         let previewHTML = '';
                         if (isImage) {
                             previewHTML = `
@@ -1427,6 +1733,7 @@
                                 <div class="item-card-meta">
                                     ${(attachment.fileSize / 1024).toFixed(2)} KB · 
                                     ${new Date(attachment.uploadedAt.seconds * 1000).toLocaleDateString()}
+                                    ${canTranscribe ? ' · <span style="color: var(--accent-dark);">📝 Transcribable</span>' : ''}
                                 </div>
                             `;
                         }
@@ -1437,6 +1744,11 @@
                                 <a href="${attachment.url}" target="_blank" rel="noopener noreferrer" class="btn-primary btn-sm" style="text-decoration: none;">
                                     ${isImage ? 'View Full Size' : 'Download'}
                                 </a>
+                                ${canTranscribe ? `
+                                    <button class="btn-transcribe btn-sm transcribe-file" data-url="${attachment.url}" data-file-name="${attachment.fileName}">
+                                        📝 Transcribe to Notes
+                                    </button>
+                                ` : ''}
                                 <button class="btn-danger btn-sm delete-file" data-public-id="${attachment.publicId}" data-file-name="${attachment.fileName}">
                                     Delete
                                 </button>
@@ -1445,7 +1757,7 @@
                         container.appendChild(fileCard);
                     });
 
-                    // Add delete listeners
+                    // Delete listeners
                     document.querySelectorAll(".delete-file").forEach((btn) => {
                         btn.addEventListener("click", async (e) => {
                             const publicId = e.target.dataset.publicId;
@@ -1453,30 +1765,40 @@
                             
                             if (confirm(`Delete ${fileName}?`)) {
                                 try {
-                                    // Remove from Firestore
-                                    const lessonRef = doc(
-                                        db,
-                                        "users",
-                                        state.currentUser.uid,
-                                        "classes",
-                                        state.currentClass.id,
-                                        "lessons",
-                                        state.currentLesson.id
-                                    );
+                                    const lessonRef = doc(db, "users", state.currentUser.uid, "classes", state.currentClass.id, "lessons", state.currentLesson.id);
 
                                     await updateDoc(lessonRef, {
-                                        attachments: arrayRemove(
-                                            attachments.find(a => a.publicId === publicId)
-                                        )
+                                        attachments: arrayRemove(attachments.find(a => a.publicId === publicId))
                                     });
 
-                                    // Note: Actual deletion from Cloudinary requires backend
                                     await deleteFromCloudinary(publicId);
-                                    
                                     await loadAttachments();
                                 } catch (error) {
                                     console.error("Delete file error:", error);
                                     alert("Error deleting file");
+                                }
+                            }
+                        });
+                    });
+
+                    // Transcribe listeners
+                    document.querySelectorAll(".transcribe-file").forEach((btn) => {
+                        btn.addEventListener("click", async (e) => {
+                            const url = e.target.dataset.url;
+                            const fileName = e.target.dataset.fileName;
+                            
+                            if (confirm(`Transcribe ${fileName} and add to notes? This may take a moment.`)) {
+                                try {
+                                    showTranscribeStatus(`Downloading ${fileName}...`);
+                                    const response = await fetch(url);
+                                    const blob = await response.blob();
+                                    const file = new File([blob], fileName, { type: blob.type });
+                                    
+                                    await transcribeAndAddToNotes(file);
+                                } catch (error) {
+                                    console.error("Transcribe error:", error);
+                                    showTranscribeStatus(`✗ Error transcribing ${fileName}: ${error.message}`, true);
+                                    setTimeout(hideTranscribeStatus, 5000);
                                 }
                             }
                         });
@@ -1499,6 +1821,18 @@
                     return;
                 }
 
+                // Check for transcribable files
+                const transcribableFiles = Array.from(files).filter(f => isTranscribableFile(f.name));
+                let autoTranscribe = false;
+                
+                if (transcribableFiles.length > 0) {
+                    const fileList = transcribableFiles.map(f => f.name).join(', ');
+                    autoTranscribe = confirm(
+                        `Found ${transcribableFiles.length} PDF/PowerPoint file(s): ${fileList}\n\n` +
+                        `Would you like to automatically transcribe them to your notes after uploading?`
+                    );
+                }
+
                 const progressContainer = document.getElementById("upload-progress");
                 const progressFill = document.getElementById("progress-fill");
                 progressContainer.classList.add("active");
@@ -1508,19 +1842,9 @@
                     let uploadedCount = 0;
 
                     for (const file of files) {
-                        // Upload to Cloudinary
                         const uploadResult = await uploadToCloudinary(file);
 
-                        // Save metadata to Firestore
-                        const lessonRef = doc(
-                            db,
-                            "users",
-                            state.currentUser.uid,
-                            "classes",
-                            state.currentClass.id,
-                            "lessons",
-                            state.currentLesson.id
-                        );
+                        const lessonRef = doc(db, "users", state.currentUser.uid, "classes", state.currentClass.id, "lessons", state.currentLesson.id);
 
                         await updateDoc(lessonRef, {
                             attachments: arrayUnion({
@@ -1542,6 +1866,13 @@
                     alert(`${files.length} file(s) uploaded successfully!`);
                     document.getElementById("file-upload").value = "";
                     await loadAttachments();
+                    
+                    // Auto-transcribe if requested
+                    if (autoTranscribe && transcribableFiles.length > 0) {
+                        for (const file of transcribableFiles) {
+                            await transcribeAndAddToNotes(file);
+                        }
+                    }
                 } catch (error) {
                     console.error("Upload error:", error);
                     alert("Error uploading file(s): " + error.message);
@@ -1642,7 +1973,7 @@
                 showAIOutput(result);
             });
 
-            console.log("Notey lessons page loaded successfully with image preview and fixed search!");
+            console.log("Notey lessons page loaded with live formatting preview!");
         </script>
     </body>
 </html>
