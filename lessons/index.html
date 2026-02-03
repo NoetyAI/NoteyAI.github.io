@@ -1058,8 +1058,13 @@
             function formatInlineMarkdown(text) {
                 if (!text) return '';
                 
-                // Bold (**text** or __text__)
+                // Escape HTML first
+                text = escapeHtml(text);
+                
+                // Bold (**text**)
                 text = text.replace(/\*\*([^*]+)\*\*/g, '<span class="preview-bold">$1</span>');
+                
+                // Underline (__text__)
                 text = text.replace(/__([^_]+)__/g, '<span class="preview-underline">$1</span>');
                 
                 // Italic (*text*)
@@ -1068,7 +1073,7 @@
                 // Inline code (`code`)
                 text = text.replace(/`([^`]+)`/g, '<span class="preview-code">$1</span>');
                 
-                return escapeHtml(text).replace(/&lt;span class="preview-/g, '<span class="preview-').replace(/&lt;\/span&gt;/g, '</span>');
+                return text;
             }
             
             function escapeHtml(text) {
@@ -1668,7 +1673,9 @@
                 });
 
                 if (!response.ok) {
-                    throw new Error("Upload failed");
+                    const errorData = await response.json();
+                    console.error("Cloudinary error:", errorData);
+                    throw new Error(errorData.error?.message || "Upload failed");
                 }
 
                 return await response.json();
@@ -1842,12 +1849,17 @@
                     let uploadedCount = 0;
 
                     for (const file of files) {
-                        const uploadResult = await uploadToCloudinary(file);
+                        try {
+                            const uploadResult = await uploadToCloudinary(file);
 
-                        const lessonRef = doc(db, "users", state.currentUser.uid, "classes", state.currentClass.id, "lessons", state.currentLesson.id);
+                            const lessonRef = doc(db, "users", state.currentUser.uid, "classes", state.currentClass.id, "lessons", state.currentLesson.id);
 
-                        await updateDoc(lessonRef, {
-                            attachments: arrayUnion({
+                            // First get current lesson data to ensure attachments array exists
+                            const lessonDoc = await getDoc(lessonRef);
+                            const currentAttachments = lessonDoc.data()?.attachments || [];
+
+                            // Create new attachment object
+                            const newAttachment = {
                                 fileName: file.name,
                                 fileSize: file.size,
                                 fileType: file.type,
@@ -1855,22 +1867,32 @@
                                 publicId: uploadResult.public_id,
                                 uploadedAt: new Date(),
                                 uploadedBy: state.currentUser.uid
-                            })
-                        });
+                            };
 
-                        uploadedCount++;
-                        const progress = (uploadedCount / totalFiles) * 100;
-                        progressFill.style.width = `${progress}%`;
+                            // Update with new array
+                            await updateDoc(lessonRef, {
+                                attachments: [...currentAttachments, newAttachment]
+                            });
+
+                            uploadedCount++;
+                            const progress = (uploadedCount / totalFiles) * 100;
+                            progressFill.style.width = `${progress}%`;
+                        } catch (fileError) {
+                            console.error(`Error uploading ${file.name}:`, fileError);
+                            alert(`Error uploading ${file.name}: ${fileError.message}`);
+                        }
                     }
 
-                    alert(`${files.length} file(s) uploaded successfully!`);
-                    document.getElementById("file-upload").value = "";
-                    await loadAttachments();
-                    
-                    // Auto-transcribe if requested
-                    if (autoTranscribe && transcribableFiles.length > 0) {
-                        for (const file of transcribableFiles) {
-                            await transcribeAndAddToNotes(file);
+                    if (uploadedCount > 0) {
+                        alert(`${uploadedCount} file(s) uploaded successfully!`);
+                        document.getElementById("file-upload").value = "";
+                        await loadAttachments();
+                        
+                        // Auto-transcribe if requested
+                        if (autoTranscribe && transcribableFiles.length > 0) {
+                            for (const file of transcribableFiles) {
+                                await transcribeAndAddToNotes(file);
+                            }
                         }
                     }
                 } catch (error) {
