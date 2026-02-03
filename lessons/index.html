@@ -3,7 +3,7 @@
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>Notey | Lessons</title>
+        <title>Notey — Lessons</title>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link
@@ -458,6 +458,32 @@
                 margin: 0 0.25rem;
             }
 
+            /* Color picker button */
+            .color-picker-wrapper {
+                position: relative;
+                display: inline-block;
+            }
+
+            .color-picker-btn {
+                width: 32px;
+                height: 32px;
+                border-radius: 6px;
+                border: 1px solid var(--border);
+                cursor: pointer;
+                position: relative;
+                overflow: hidden;
+            }
+
+            .color-picker-btn input[type="color"] {
+                position: absolute;
+                top: -10px;
+                left: -10px;
+                width: 60px;
+                height: 60px;
+                border: none;
+                cursor: pointer;
+            }
+
             /* Search bar styles */
             .search-container {
                 position: relative;
@@ -534,9 +560,14 @@
                 background: transparent;
                 position: relative;
                 z-index: 2;
-                color: transparent;
+                color: rgba(0, 0, 0, 0.15);
                 caret-color: var(--text);
                 padding: 1rem;
+            }
+
+            #note-content::selection {
+                background: rgba(99, 102, 241, 0.3);
+                color: rgba(0, 0, 0, 0.3);
             }
 
             #note-content:focus {
@@ -844,6 +875,19 @@
 
                         <div class="toolbar-separator"></div>
 
+                        <div class="color-picker-wrapper" title="Text Color">
+                            <div class="color-picker-btn" style="background: linear-gradient(135deg, #000 0%, #666 100%);">
+                                <input type="color" id="text-color-picker" value="#000000" />
+                            </div>
+                        </div>
+
+                        <button class="toolbar-btn" data-format="highlight-yellow" title="Yellow Highlight" style="background: #fef08a;">⬛</button>
+                        <button class="toolbar-btn" data-format="highlight-green" title="Green Highlight" style="background: #bbf7d0;">⬛</button>
+                        <button class="toolbar-btn" data-format="highlight-blue" title="Blue Highlight" style="background: #bfdbfe;">⬛</button>
+                        <button class="toolbar-btn" data-format="highlight-pink" title="Pink Highlight" style="background: #fbcfe8;">⬛</button>
+
+                        <div class="toolbar-separator"></div>
+
                         <button class="toolbar-btn" data-format="clear" title="Clear Formatting">⌫ Clear</button>
                     </div>
 
@@ -858,7 +902,7 @@
                     <!-- AI Section -->
                     <div class="ai-section">
                         <h4>AI Study Assistant</h4>
-                        <p class="muted mb-2">Get AI-powered help with your notes. (May not work at school)</p>
+                        <p class="muted mb-2">Get AI-powered help with your notes.</p>
 
                         <div class="row mb-2">
                             <button id="btn-ai-summarize" class="btn-ai btn-sm">Summarize Notes</button>
@@ -1012,15 +1056,15 @@
                     
                     // Handle headings
                     if (line.startsWith('### ')) {
-                        html += `<span class="preview-h3">${escapeHtml(line.substring(4))}</span>\n`;
+                        html += `<span class="preview-h3">${formatInlineMarkdown(line.substring(4))}</span>\n`;
                         continue;
                     }
                     if (line.startsWith('## ')) {
-                        html += `<span class="preview-h2">${escapeHtml(line.substring(3))}</span>\n`;
+                        html += `<span class="preview-h2">${formatInlineMarkdown(line.substring(3))}</span>\n`;
                         continue;
                     }
                     if (line.startsWith('# ')) {
-                        html += `<span class="preview-h1">${escapeHtml(line.substring(2))}</span>\n`;
+                        html += `<span class="preview-h1">${formatInlineMarkdown(line.substring(2))}</span>\n`;
                         continue;
                     }
                     
@@ -1038,7 +1082,7 @@
                     if (line.match(/^\d+\.\s/)) {
                         const match = line.match(/^(\d+)\.\s(.*)$/);
                         if (match) {
-                            html += `<span class="preview-list-item">${match[1]}. ${formatInlineMarkdown(match[2])}</span>\n`;
+                            html += `<span class="preview-list-item">${escapeHtml(match[1])}. ${formatInlineMarkdown(match[2])}</span>\n`;
                             continue;
                         }
                     }
@@ -1060,6 +1104,15 @@
                 
                 // Escape HTML first
                 text = escapeHtml(text);
+                
+                // Handle custom color syntax: [color:#hex]text[/color]
+                text = text.replace(/\[color:(#[0-9a-fA-F]{6})\](.*?)\[\/color\]/g, '<span style="color: $1;">$2</span>');
+                
+                // Handle highlight syntax: [hl:color]text[/hl]
+                text = text.replace(/\[hl:yellow\](.*?)\[\/hl\]/g, '<span style="background-color: #fef08a; padding: 0.1em 0.2em; border-radius: 3px;">$1</span>');
+                text = text.replace(/\[hl:green\](.*?)\[\/hl\]/g, '<span style="background-color: #bbf7d0; padding: 0.1em 0.2em; border-radius: 3px;">$1</span>');
+                text = text.replace(/\[hl:blue\](.*?)\[\/hl\]/g, '<span style="background-color: #bfdbfe; padding: 0.1em 0.2em; border-radius: 3px;">$1</span>');
+                text = text.replace(/\[hl:pink\](.*?)\[\/hl\]/g, '<span style="background-color: #fbcfe8; padding: 0.1em 0.2em; border-radius: 3px;">$1</span>');
                 
                 // Bold (**text**)
                 text = text.replace(/\*\*([^*]+)\*\*/g, '<span class="preview-bold">$1</span>');
@@ -1287,6 +1340,22 @@
                         }
                         cursorOffset = formattedText.length;
                         break;
+                    case "highlight-yellow":
+                        formattedText = `[hl:yellow]${selectedText || "highlighted text"}[/hl]`;
+                        cursorOffset = selectedText ? formattedText.length : 11;
+                        break;
+                    case "highlight-green":
+                        formattedText = `[hl:green]${selectedText || "highlighted text"}[/hl]`;
+                        cursorOffset = selectedText ? formattedText.length : 10;
+                        break;
+                    case "highlight-blue":
+                        formattedText = `[hl:blue]${selectedText || "highlighted text"}[/hl]`;
+                        cursorOffset = selectedText ? formattedText.length : 9;
+                        break;
+                    case "highlight-pink":
+                        formattedText = `[hl:pink]${selectedText || "highlighted text"}[/hl]`;
+                        cursorOffset = selectedText ? formattedText.length : 9;
+                        break;
                     case "clear":
                         formattedText = selectedText
                             .replace(/\*\*/g, "")
@@ -1297,7 +1366,11 @@
                             .replace(/^\d+\.\s/gm, "")
                             .replace(/^>\s/gm, "")
                             .replace(/```/g, "")
-                            .replace(/`/g, "");
+                            .replace(/`/g, "")
+                            .replace(/\[color:#[0-9a-fA-F]{6}\]/g, "")
+                            .replace(/\[\/color\]/g, "")
+                            .replace(/\[hl:(yellow|green|blue|pink)\]/g, "")
+                            .replace(/\[\/hl\]/g, "");
                         cursorOffset = formattedText.length;
                         break;
                 }
@@ -1317,6 +1390,31 @@
                     const format = btn.dataset.format;
                     insertFormatting(format);
                 });
+            });
+
+            // Text color picker
+            document.getElementById("text-color-picker").addEventListener("change", (e) => {
+                const color = e.target.value;
+                const textarea = document.getElementById("note-content");
+                const start = textarea.selectionStart;
+                const end = textarea.selectionEnd;
+                const selectedText = textarea.value.substring(start, end);
+                
+                if (!selectedText) {
+                    alert("Please select some text first!");
+                    return;
+                }
+                
+                const beforeText = textarea.value.substring(0, start);
+                const afterText = textarea.value.substring(end);
+                const formattedText = `[color:${color}]${selectedText}[/color]`;
+                
+                textarea.value = beforeText + formattedText + afterText;
+                textarea.focus();
+                textarea.selectionStart = start + formattedText.length;
+                textarea.selectionEnd = start + formattedText.length;
+                
+                updatePreview();
             });
 
             // Keyboard shortcuts
@@ -1905,27 +2003,44 @@
             });
 
             // ============================================================================
-            // AI FEATURES
+            // AI FEATURES - NO API KEY REQUIRED (uses claude.ai artifact API)
             // ============================================================================
             async function callClaudeAPI(prompt) {
                 try {
                     const response = await fetch("https://api.anthropic.com/v1/messages", {
                         method: "POST",
                         headers: {
-                            "Content-Type": "application/json"
+                            "Content-Type": "application/json",
+                            "anthropic-version": "2023-06-01"
                         },
                         body: JSON.stringify({
                             model: "claude-sonnet-4-20250514",
-                            max_tokens: 1000,
+                            max_tokens: 2048,
                             messages: [{ role: "user", content: prompt }]
                         })
                     });
 
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        console.error("API Error Response:", errorText);
+                        throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+                    }
+
                     const data = await response.json();
-                    return data.content.find((item) => item.type === "text")?.text || "No response";
+                    
+                    // Handle different response formats
+                    if (data.content && Array.isArray(data.content)) {
+                        const textContent = data.content.find((item) => item.type === "text");
+                        if (textContent) {
+                            return textContent.text;
+                        }
+                    }
+                    
+                    console.error("Unexpected API response format:", data);
+                    return "Unable to process AI response. Please try again.";
                 } catch (error) {
                     console.error("AI API error:", error);
-                    return "Error calling AI. Please try again.";
+                    return `AI Error: ${error.message}. The AI assistant feature requires an API connection. Please check your internet connection and try again.`;
                 }
             }
 
@@ -1995,7 +2110,7 @@
                 showAIOutput(result);
             });
 
-            console.log("Notey lessons page loaded with live formatting preview!");
+            console.log("Notey lessons page loaded with live formatting preview, text colors, and highlights!");
         </script>
     </body>
 </html>
