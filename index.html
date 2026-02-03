@@ -3,7 +3,7 @@
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>Notey — Smart Study Notes</title>
+        <title>Notey | Smart Study Notes</title>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link
@@ -453,8 +453,6 @@
                             </div>
                         </div>
                     </div>
-
-                    <p class="muted mt-3 text-center">New accounts require admin approval before you can sign in.</p>
                 </div>
             </section>
 
@@ -464,7 +462,7 @@
                     <div class="row space-between mb-3">
                         <div>
                             <h2 id="welcome-name">Welcome</h2>
-                            <p class="muted" id="welcome-email">user@example.com</p>
+                            <p class="muted" id="welcome-email"></p>
                         </div>
                         <button id="btn-logout" class="btn-secondary btn-sm">Sign out</button>
                     </div>
@@ -485,16 +483,6 @@
                     </div>
                 </div>
             </section>
-
-            <!-- Admin View -->
-            <section id="view-admin" class="card hidden">
-                <h2>Admin Panel</h2>
-                <p class="muted mb-3">Approve or reject new user accounts</p>
-                <h3>Pending Users</h3>
-                <div id="pending-users">
-                    <!-- Pending users will be loaded here -->
-                </div>
-            </section>
         </main>
 
         <script type="module">
@@ -511,19 +499,17 @@
                 measurementId: "G-L0RJKWNMN7"
             };
 
-            const adminEmails = ["kaioliver111@gmail.com"];
-
             // ============================================================================
-            // FIREBASE IMPORTS
+            // FIREBASE IMPORTS - Updated to v10.x
             // ============================================================================
-            import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+            import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
             import {
                 getAuth,
                 onAuthStateChanged,
                 createUserWithEmailAndPassword,
                 signInWithEmailAndPassword,
                 signOut
-            } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+            } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
             import {
                 getFirestore,
                 doc,
@@ -532,9 +518,9 @@
                 collection,
                 addDoc,
                 getDocs,
-                updateDoc,
-                deleteDoc
-            } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+                deleteDoc,
+                serverTimestamp
+            } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
             const app = initializeApp(firebaseConfig);
             const auth = getAuth(app);
@@ -553,8 +539,7 @@
             // ============================================================================
             const views = {
                 auth: document.getElementById("view-auth"),
-                classes: document.getElementById("view-classes"),
-                admin: document.getElementById("view-admin")
+                classes: document.getElementById("view-classes")
             };
 
             function showView(viewName) {
@@ -578,61 +563,91 @@
             // AUTHENTICATION
             // ============================================================================
             document.getElementById("btn-register").addEventListener("click", async () => {
+                const btn = document.getElementById("btn-register");
+                btn.disabled = true;
+
                 try {
                     const email = document.getElementById("reg-email").value.trim();
                     const password = document.getElementById("reg-password").value;
-                    const name = document.getElementById("reg-name").value.trim() || "Unknown";
+                    const name = document.getElementById("reg-name").value.trim() || "Student";
 
                     if (!email || !password) {
                         alert("Please provide email and password");
+                        btn.disabled = false;
                         return;
                     }
 
                     if (password.length < 6) {
                         alert("Password must be at least 6 characters");
+                        btn.disabled = false;
                         return;
                     }
 
+                    console.log("Creating user account...");
                     const cred = await createUserWithEmailAndPassword(auth, email, password);
 
+                    // Create user profile in Firestore
                     const userDocRef = doc(db, "users", cred.user.uid);
-                    const userDocSnap = await getDoc(userDocRef);
+                    await setDoc(userDocRef, {
+                        email: email,
+                        name: name,
+                        createdAt: serverTimestamp()
+                    });
 
-                    if (!userDocSnap.exists()) {
-                        await setDoc(userDocRef, {
-                            email,
-                            name,
-                            approved: false,
-                            createdAt: new Date()
-                        });
-                    }
+                    console.log("Account created successfully!");
+                    alert("Account created successfully! You can now use Notey.");
 
-                    alert("Account created! Please wait for admin approval before signing in.");
+                    // Clear form
                     document.getElementById("reg-name").value = "";
                     document.getElementById("reg-email").value = "";
                     document.getElementById("reg-password").value = "";
 
-                    await signOut(auth);
+                    // User will be automatically signed in and redirected
                 } catch (error) {
                     console.error("Registration error:", error);
-                    alert(error.message);
+
+                    let errorMessage = error.message;
+                    if (error.code === "auth/email-already-in-use") {
+                        errorMessage = "This email is already registered. Please sign in instead.";
+                    } else if (error.code === "permission-denied") {
+                        errorMessage = "Database error. Please contact support.";
+                    }
+
+                    alert(errorMessage);
+                } finally {
+                    btn.disabled = false;
                 }
             });
 
             document.getElementById("btn-signin").addEventListener("click", async () => {
+                const btn = document.getElementById("btn-signin");
+                btn.disabled = true;
+
                 try {
                     const email = document.getElementById("signin-email").value.trim();
                     const password = document.getElementById("signin-password").value;
 
                     if (!email || !password) {
                         alert("Please provide email and password");
+                        btn.disabled = false;
                         return;
                     }
 
+                    console.log("Attempting sign in...");
                     await signInWithEmailAndPassword(auth, email, password);
                 } catch (error) {
                     console.error("Sign in error:", error);
-                    alert(error.message);
+
+                    let errorMessage = error.message;
+                    if (error.code === "auth/invalid-credential") {
+                        errorMessage = "Invalid email or password.";
+                    } else if (error.code === "auth/user-not-found") {
+                        errorMessage = "No account found with this email.";
+                    }
+
+                    alert(errorMessage);
+                } finally {
+                    btn.disabled = false;
                 }
             });
 
@@ -650,8 +665,6 @@
             // ============================================================================
             onAuthStateChanged(auth, async (user) => {
                 state.currentUser = user;
-                const topActions = document.getElementById("top-actions");
-                topActions.innerHTML = "";
 
                 if (!user) {
                     showView("auth");
@@ -659,35 +672,21 @@
                 }
 
                 try {
+                    console.log("User authenticated:", user.uid);
                     const userDoc = await getDoc(doc(db, "users", user.uid));
 
                     if (!userDoc.exists()) {
+                        console.error("User profile not found");
                         await signOut(auth);
-                        alert("User profile not found. Please contact admin.");
+                        alert("User profile not found. Please try creating an account again.");
                         return;
                     }
 
                     const userData = userDoc.data();
-
-                    if (!userData.approved) {
-                        await signOut(auth);
-                        alert("Your account is pending approval. Please wait for admin approval.");
-                        return;
-                    }
+                    console.log("User data:", userData);
 
                     document.getElementById("welcome-name").textContent = `Welcome, ${userData.name || "Student"}`;
                     document.getElementById("welcome-email").textContent = user.email;
-
-                    if (adminEmails.includes(user.email)) {
-                        const adminBtn = document.createElement("button");
-                        adminBtn.textContent = "Admin";
-                        adminBtn.className = "btn-header";
-                        adminBtn.addEventListener("click", () => {
-                            renderPendingUsers();
-                            showView("admin");
-                        });
-                        topActions.appendChild(adminBtn);
-                    }
 
                     showView("classes");
                     loadClasses();
@@ -697,64 +696,6 @@
                     await signOut(auth);
                 }
             });
-
-            // ============================================================================
-            // ADMIN FUNCTIONS
-            // ============================================================================
-            async function renderPendingUsers() {
-                const container = document.getElementById("pending-users");
-                container.innerHTML = '<div class="muted">Loading...</div>';
-
-                try {
-                    const usersSnapshot = await getDocs(collection(db, "users"));
-                    container.innerHTML = "";
-
-                    let hasPending = false;
-                    usersSnapshot.forEach((docSnap) => {
-                        const userData = docSnap.data();
-
-                        if (!userData.approved) {
-                            hasPending = true;
-                            const card = document.createElement("div");
-                            card.className = "item-card";
-                            card.innerHTML = `
-              <div class="item-card-title">${userData.name || "Unknown"}</div>
-              <div class="item-card-meta">${userData.email}</div>
-              <div class="muted mb-2">Registered: ${formatDateTime(userData.createdAt)}</div>
-              <div class="item-card-actions">
-                <button class="btn-primary btn-sm approve-btn" data-id="${docSnap.id}" data-name="${userData.name || userData.email}">
-                  Approve
-                </button>
-              </div>
-            `;
-                            container.appendChild(card);
-                        }
-                    });
-
-                    if (!hasPending) {
-                        container.innerHTML =
-                            '<div class="empty-state"><div class="empty-state-icon">✓</div><p>No pending users</p></div>';
-                    } else {
-                        document.querySelectorAll(".approve-btn").forEach((btn) => {
-                            btn.addEventListener("click", async (e) => {
-                                const userId = e.target.dataset.id;
-                                const userName = e.target.dataset.name;
-                                try {
-                                    await updateDoc(doc(db, "users", userId), { approved: true });
-                                    alert(`Approved ${userName}`);
-                                    renderPendingUsers();
-                                } catch (error) {
-                                    console.error("Approve error:", error);
-                                    alert("Error approving user");
-                                }
-                            });
-                        });
-                    }
-                } catch (error) {
-                    console.error("Error loading pending users:", error);
-                    container.innerHTML = '<div class="muted">Error loading users</div>';
-                }
-            }
 
             // ============================================================================
             // CLASS MANAGEMENT
@@ -840,7 +781,7 @@
                 try {
                     await addDoc(collection(db, "users", state.currentUser.uid, "classes"), {
                         name,
-                        createdAt: new Date()
+                        createdAt: serverTimestamp()
                     });
 
                     document.getElementById("new-class-name").value = "";
