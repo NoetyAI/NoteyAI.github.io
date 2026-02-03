@@ -403,7 +403,7 @@
                 font-weight: 500;
             }
 
-            /* NEW: Formatting toolbar styles */
+            /* Formatting toolbar styles */
             .formatting-toolbar {
                 background: var(--bg);
                 border: 2px solid var(--border);
@@ -446,7 +446,7 @@
                 margin: 0 0.25rem;
             }
 
-            /* NEW: Search bar styles */
+            /* Search bar styles */
             .search-container {
                 position: relative;
                 margin-bottom: 1rem;
@@ -535,6 +535,26 @@
                 transition: width 0.3s ease;
             }
 
+            /* Image preview styles */
+            .image-preview {
+                max-width: 200px;
+                max-height: 200px;
+                border-radius: var(--radius);
+                margin-top: 0.5rem;
+                object-fit: cover;
+                border: 2px solid var(--border);
+            }
+
+            .attachment-preview {
+                display: flex;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+
+            .attachment-info {
+                flex: 1;
+            }
+
             @keyframes slideIn {
                 from {
                     opacity: 0;
@@ -572,6 +592,11 @@
                     font-size: 0.85rem;
                     min-width: 32px;
                 }
+
+                .image-preview {
+                    max-width: 150px;
+                    max-height: 150px;
+                }
             }
         </style>
     </head>
@@ -592,14 +617,14 @@
                         <span id="breadcrumb-class" class="breadcrumb-current">—</span>
                     </div>
 
-                    <!-- NEW: Search bar for lessons -->
+                    <!-- Search bar for lesson titles -->
                     <div class="search-container">
                         <span class="search-icon">🔍</span>
                         <input
                             id="lesson-search"
                             type="text"
                             class="search-input"
-                            placeholder="Search lessons and notes..." />
+                            placeholder="Search lesson titles..." />
                     </div>
                     <div id="lesson-search-results" class="hidden"></div>
 
@@ -665,7 +690,7 @@
 
                     <h3>Notes</h3>
 
-                    <!-- NEW: Formatting toolbar -->
+                    <!-- Formatting toolbar -->
                     <div class="formatting-toolbar">
                         <button class="toolbar-btn" data-format="bold" title="Bold (Ctrl+B)"><strong>B</strong></button>
                         <button class="toolbar-btn" data-format="italic" title="Italic (Ctrl+I)"><em>I</em></button>
@@ -788,7 +813,7 @@
                 currentClass: null,
                 currentLesson: null,
                 currentView: "lessons",
-                allLessons: [] // NEW: Store all lessons for search
+                allLessons: []
             };
 
             // ============================================================================
@@ -822,8 +847,13 @@
                 return date.toLocaleDateString();
             }
 
+            function isImageFile(fileName) {
+                const ext = fileName.split('.').pop().toLowerCase();
+                return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'].includes(ext);
+            }
+
             // ============================================================================
-            // NEW: TEXT FORMATTING FUNCTIONS
+            // TEXT FORMATTING FUNCTIONS
             // ============================================================================
             function insertFormatting(format) {
                 const textarea = document.getElementById("note-content");
@@ -943,9 +973,9 @@
             });
 
             // ============================================================================
-            // NEW: SEARCH FUNCTIONALITY
+            // SEARCH FUNCTIONALITY - Search by lesson title only
             // ============================================================================
-            async function searchLessons(query) {
+            function searchLessons(query) {
                 if (!query.trim()) {
                     document.getElementById("lesson-search-results").classList.add("hidden");
                     return;
@@ -955,48 +985,17 @@
                 const searchTerm = query.toLowerCase();
                 const results = [];
 
-                // Search through all lessons and their notes
+                // Search through all lessons by lesson number and date
                 for (const lesson of state.allLessons) {
-                    try {
-                        // Get note content
-                        const noteDoc = await getDoc(
-                            doc(
-                                db,
-                                "users",
-                                state.currentUser.uid,
-                                "classes",
-                                state.currentClass.id,
-                                "lessons",
-                                lesson.id,
-                                "content",
-                                "note"
-                            )
-                        );
-
-                        const noteText = noteDoc.exists() ? noteDoc.data().text || "" : "";
-
-                        // Check if search term is in note content
-                        if (noteText.toLowerCase().includes(searchTerm)) {
-                            // Find context around the match
-                            const index = noteText.toLowerCase().indexOf(searchTerm);
-                            const start = Math.max(0, index - 50);
-                            const end = Math.min(noteText.length, index + searchTerm.length + 50);
-                            let context = noteText.substring(start, end);
-
-                            if (start > 0) context = "..." + context;
-                            if (end < noteText.length) context = context + "...";
-
-                            // Highlight the search term
-                            const regex = new RegExp(`(${query})`, "gi");
-                            context = context.replace(regex, '<span class="search-highlight">$1</span>');
-
-                            results.push({
-                                lesson: lesson,
-                                context: context
-                            });
-                        }
-                    } catch (error) {
-                        console.error("Error searching lesson:", error);
+                    const lessonNumber = lesson.data.lessonNumber?.toString() || "";
+                    const week = lesson.data.week?.toString() || "";
+                    const date = formatDate(lesson.data.date);
+                    
+                    // Check if search term matches lesson number, week, or date
+                    if (lessonNumber.includes(searchTerm) || 
+                        week.includes(searchTerm) || 
+                        date.toLowerCase().includes(searchTerm)) {
+                        results.push(lesson);
                     }
                 }
 
@@ -1008,9 +1007,9 @@
                             ${results
                                 .map(
                                     (result) => `
-                                <div class="search-result-item" data-lesson-id="${result.lesson.id}">
-                                    <strong>Lesson ${result.lesson.data.lessonNumber || "—"}</strong>
-                                    <div class="muted">${result.context}</div>
+                                <div class="search-result-item" data-lesson-id="${result.id}">
+                                    <strong>Lesson ${result.data.lessonNumber || "—"}</strong>
+                                    <div class="muted">${formatDate(result.data.date)} · Week ${result.data.week || "—"}</div>
                                 </div>
                             `
                                 )
@@ -1335,7 +1334,7 @@
             });
 
             // ============================================================================
-            // CLOUDINARY ATTACHMENTS
+            // CLOUDINARY ATTACHMENTS WITH IMAGE PREVIEW
             // ============================================================================
             async function uploadToCloudinary(file) {
                 const formData = new FormData();
@@ -1399,21 +1398,44 @@
                         // Determine file type icon
                         let icon = "📎";
                         const ext = attachment.fileName.split('.').pop().toLowerCase();
-                        if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) icon = "🖼️";
+                        const isImage = isImageFile(attachment.fileName);
+                        
+                        if (isImage) icon = "🖼️";
                         else if (['pdf'].includes(ext)) icon = "📄";
                         else if (['doc', 'docx'].includes(ext)) icon = "📝";
                         else if (['xls', 'xlsx'].includes(ext)) icon = "📊";
                         else if (['zip', 'rar'].includes(ext)) icon = "📦";
 
+                        // Create preview content
+                        let previewHTML = '';
+                        if (isImage) {
+                            previewHTML = `
+                                <div class="attachment-preview">
+                                    <img src="${attachment.url}" alt="${attachment.fileName}" class="image-preview" />
+                                    <div class="attachment-info">
+                                        <div class="item-card-title">${icon} ${attachment.fileName}</div>
+                                        <div class="item-card-meta">
+                                            ${(attachment.fileSize / 1024).toFixed(2)} KB · 
+                                            ${new Date(attachment.uploadedAt.seconds * 1000).toLocaleDateString()}
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        } else {
+                            previewHTML = `
+                                <div class="item-card-title">${icon} ${attachment.fileName}</div>
+                                <div class="item-card-meta">
+                                    ${(attachment.fileSize / 1024).toFixed(2)} KB · 
+                                    ${new Date(attachment.uploadedAt.seconds * 1000).toLocaleDateString()}
+                                </div>
+                            `;
+                        }
+
                         fileCard.innerHTML = `
-                            <div class="item-card-title">${icon} ${attachment.fileName}</div>
-                            <div class="item-card-meta">
-                                ${(attachment.fileSize / 1024).toFixed(2)} KB · 
-                                ${new Date(attachment.uploadedAt.seconds * 1000).toLocaleDateString()}
-                            </div>
+                            ${previewHTML}
                             <div class="item-card-actions">
                                 <a href="${attachment.url}" target="_blank" rel="noopener noreferrer" class="btn-primary btn-sm" style="text-decoration: none;">
-                                    Download
+                                    ${isImage ? 'View Full Size' : 'Download'}
                                 </a>
                                 <button class="btn-danger btn-sm delete-file" data-public-id="${attachment.publicId}" data-file-name="${attachment.fileName}">
                                     Delete
@@ -1620,7 +1642,7 @@
                 showAIOutput(result);
             });
 
-            console.log("Notey lessons page loaded successfully with Cloudinary integration!");
+            console.log("Notey lessons page loaded successfully with image preview and fixed search!");
         </script>
     </body>
 </html>
