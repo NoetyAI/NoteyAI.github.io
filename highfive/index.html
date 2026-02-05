@@ -125,24 +125,13 @@
     .confetti{ position: fixed; pointer-events:none; left:0; top:0; right:0; bottom:0; overflow:visible; z-index:9998; }
     .confetti-piece{ position:absolute; width:10px; height:14px; opacity:0.95; transform-origin:center; will-change: transform, top, left; border-radius:2px; }
 
-    /* bubble animation */
-    .bubble-container{ position: fixed; pointer-events:none; left:0; top:0; right:0; bottom:0; overflow:hidden; z-index:9997; }
-    .bubble{
+    /* high five animation */
+    .highfive-container{ position: fixed; pointer-events:none; left:0; top:0; right:0; bottom:0; overflow:hidden; z-index:9997; }
+    .highfive{
       position:absolute;
-      border-radius:50%;
-      background: linear-gradient(135deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.3) 50%, rgba(255,255,255,0.1) 100%);
-      box-shadow: inset 0 0 15px rgba(255,255,255,0.6), 0 5px 15px rgba(0,0,0,0.1);
+      font-size: 48px;
       will-change: transform, top, left, opacity;
-    }
-    .bubble::before{
-      content: '';
-      position: absolute;
-      top: 10%;
-      left: 15%;
-      width: 40%;
-      height: 40%;
-      background: radial-gradient(circle, rgba(255,255,255,0.9) 0%, transparent 70%);
-      border-radius: 50%;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
     }
 
     /* small flash when blocked */
@@ -203,7 +192,7 @@
   <div class="goal-bottom" id="goalBottom" style="display:none">Goal: —</div>
   <div class="offline-bar" id="offlineBar">YOU ARE OFFLINE! Local changes will sync when you reconnect.</div>
   <div class="confetti" id="confettiLayer" aria-hidden="true"></div>
-  <div class="bubble-container" id="bubbleContainer" aria-hidden="true"></div>
+  <div class="highfive-container" id="highfiveContainer" aria-hidden="true"></div>
 
 <script>
 /* ---------- Firebase config (user-provided) ---------- */
@@ -239,7 +228,7 @@ const goalLabel = document.getElementById('goalLabel');
 const goalBottom = document.getElementById('goalBottom');
 const confettiLayer = document.getElementById('confettiLayer');
 const goalRow = document.getElementById('goalRow');
-const bubbleContainer = document.getElementById('bubbleContainer');
+const highfiveContainer = document.getElementById('highfiveContainer');
 
 /* ---------- Sound Effects ---------- */
 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -329,7 +318,7 @@ function render(){
   // Check if count increased to trigger effects
   if (shown > previousCount) {
     playPopSound();
-    triggerBubbles(3);
+    triggerHighFives(3);
     countDisplay.classList.add('pulse');
     setTimeout(() => countDisplay.classList.remove('pulse'), 300);
   } else if (shown < previousCount) {
@@ -405,33 +394,32 @@ function stopConfetti(){
   confettiInterval = null;
 }
 
-/* ---------- Bubble Animation ---------- */
-function spawnBubble() {
-  const bubble = document.createElement('div');
-  bubble.className = 'bubble';
+/* ---------- High Five Animation ---------- */
+function spawnHighFive() {
+  const highfive = document.createElement('div');
+  highfive.className = 'highfive';
+  highfive.textContent = '🙌';
   
-  const size = 30 + Math.random() * 60;
-  bubble.style.width = size + 'px';
-  bubble.style.height = size + 'px';
-  bubble.style.left = (Math.random() * 100) + 'vw';
-  bubble.style.bottom = '-100px';
+  highfive.style.left = (Math.random() * 100) + 'vw';
+  highfive.style.bottom = '-60px';
   
-  const duration = 2000 + Math.random() * 2000;
-  const drift = (Math.random() * 100) - 50;
-  const wobble = Math.random() * 30 - 15;
+  const duration = 2000 + Math.random() * 1500;
+  const drift = (Math.random() * 150) - 75;
+  const rotation = (Math.random() * 90) - 45; // Random rotation
+  const scale = 0.8 + Math.random() * 0.4; // Random size variation
   
-  bubble.animate([
+  highfive.animate([
     { 
-      transform: `translateX(0px) translateY(0px) scale(0.8)`, 
+      transform: `translateX(0px) translateY(0px) rotate(0deg) scale(${scale})`, 
       opacity: 0 
     },
     { 
-      transform: `translateX(${drift/2}px) translateY(-50vh) scale(1)`, 
-      opacity: 0.8,
-      offset: 0.3
+      transform: `translateX(${drift/2}px) translateY(-40vh) rotate(${rotation/2}deg) scale(${scale})`, 
+      opacity: 1,
+      offset: 0.2
     },
     { 
-      transform: `translateX(${drift + wobble}px) translateY(-110vh) scale(0.6)`, 
+      transform: `translateX(${drift}px) translateY(-110vh) rotate(${rotation}deg) scale(${scale * 0.7})`, 
       opacity: 0 
     }
   ], { 
@@ -439,13 +427,13 @@ function spawnBubble() {
     easing: 'ease-out' 
   });
   
-  bubbleContainer.appendChild(bubble);
-  setTimeout(() => bubble.remove(), duration);
+  highfiveContainer.appendChild(highfive);
+  setTimeout(() => highfive.remove(), duration);
 }
 
-function triggerBubbles(count = 5) {
+function triggerHighFives(count = 5) {
   for (let i = 0; i < count; i++) {
-    setTimeout(() => spawnBubble(), i * 50);
+    setTimeout(() => spawnHighFive(), i * 50);
   }
 }
 
@@ -702,4 +690,4 @@ window.addEventListener('beforeunload', () => {
 });
 </script>
 </body>
-</html>
+</html> 
